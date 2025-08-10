@@ -8,7 +8,12 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(mkdir:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(rm:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(swift build:*)",
+      "Bash(swiftc:*)",
+      "Bash(gh repo create:*)"
     ],
     "deny": []
   }
