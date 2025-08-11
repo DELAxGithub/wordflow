@@ -1,0 +1,92 @@
+name: Auto add Issues to Project Backlog
+
+on:
+  issues:
+    types: [opened]     # 新規Issueだけ
+  workflow_dispatch:     # 手動実行用（テストや再実行に便利）
+
+permissions:
+  contents: read
+  issues: write
+  projects: write        # Projects v2を書き込むのに必要
+
+env:
+  OWNER: DELAxGithub
+  PROJECT_NUMBER: "4"
+  STATUS_FIELD_NAME: "Status"
+  STATUS_OPTION_NAME: "Backlog"
+
+jobs:
+  add_to_project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare variables
+        id: prep
+        run: |
+          echo "ISSUE_NODE_ID=${{ github.event.issue.node_id }}" >> $GITHUB_OUTPUT
+
+      - name: Get Project ID and Status field/option IDs
+        id: meta
+        run: |
+          Q='
+          query($owner:String!, $number:Int!) {
+            user(login:$owner) {
+              projectV2(number:$number) {
+                id
+                fields(first:50) {
+                  nodes {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      name
+                      options { id name }
+                    }
+                  }
+                }
+              }
+            }
+          }'
+          resp=$(gh api graphql -f query="$Q" -F owner="${OWNER}" -F number="${PROJECT_NUMBER}")
+          PROJ_ID=$(echo "$resp" | jq -r '.data.user.projectV2.id')
+          STATUS_FIELD_ID=$(echo "$resp" | jq -r --arg n "$STATUS_FIELD_NAME" '.data.user.projectV2.fields.nodes[] | select(.name==$n) | .id')
+          BACKLOG_OPTION_ID=$(echo "$resp" | jq -r --arg n "$STATUS_FIELD_NAME" --arg o "$STATUS_OPTION_NAME" '.data.user.projectV2.fields.nodes[] | select(.name==$n) | .options[] | select(.name==$o) | .id')
+          echo "project_id=$PROJ_ID"            >> $GITHUB_OUTPUT
+          echo "status_field_id=$STATUS_FIELD_ID" >> $GITHUB_OUTPUT
+          echo "backlog_option_id=$BACKLOG_OPTION_ID" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add issue to Project
+        id: add
+        run: |
+          M='
+          mutation($project:ID!, $content:ID!) {
+            addProjectV2ItemById(input:{projectId:$project, contentId:$content}) {
+              item { id }
+            }
+          }'
+          resp=$(gh api graphql -f query="$M" \
+                 -F project='${{ steps.meta.outputs.project_id }}' \
+                 -F content='${{ steps.prep.outputs.ISSUE_NODE_ID }}')
+          ITEM_ID=$(echo "$resp" | jq -r '.data.addProjectV2ItemById.item.id')
+          echo "item_id=$ITEM_ID" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Status = Backlog
+        run: |
+          M='
+          mutation($project:ID!, $item:ID!, $field:ID!, $option: String!) {
+            updateProjectV2ItemFieldValue(input:{
+              projectId:$project,
+              itemId:$item,
+              fieldId:$field,
+              value:{ singleSelectOptionId:$option }
+            }) { projectV2Item { id } }
+          }'
+          gh api graphql -f query="$M" \
+            -F project='${{ steps.meta.outputs.project_id }}' \
+            -F item='${{ steps.add.outputs.item_id }}' \
+            -F field='${{ steps.meta.outputs.status_field_id }}' \
+            -F option='${{ steps.meta.outputs.backlog_option_id }}'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
