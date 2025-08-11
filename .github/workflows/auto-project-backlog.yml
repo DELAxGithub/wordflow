@@ -40,7 +40,7 @@ jobs:
           number="$PROJECT_NUMBER"
           issue_node="${{ github.event.issue.node_id }}"
 
-          # 1) プロジェクトID と Status/Backlog の各ID取得（user/organization両対応）
+          # 1) プロジェクトID と Status/Backlog の各ID取得（user専用）
           resp=$(gh api graphql -F login="$login" -F number="$number" -f query='
             query($login:String!, $number:Int!) {
               user(login:$login) {
@@ -56,30 +56,15 @@ jobs:
                   }
                 }
               }
-              organization(login:$login) {
-                projectV2(number:$number) {
-                  id
-                  fields(first:100) {
-                    nodes {
-                      ... on ProjectV2SingleSelectField {
-                        id name
-                        options { id name }
-                      }
-                    }
-                  }
-                }
-              }
             }')
 
-          project_id=$(echo "$resp" | jq -r '.data.user.projectV2.id // .data.organization.projectV2.id')
+          project_id=$(echo "$resp" | jq -r '.data.user.projectV2.id')
           status_field_id=$(echo "$resp" | jq -r --arg n "$STATUS_FIELD_NAME" '
-            (.data.user.projectV2.fields.nodes[]? // empty | select(.name==$n) | .id),
-            (.data.organization.projectV2.fields.nodes[]? // empty | select(.name==$n) | .id)
-          ' | head -n1)
+            .data.user.projectV2.fields.nodes[] | select(.name==$n) | .id
+          ')
           backlog_option_id=$(echo "$resp" | jq -r --arg n "$STATUS_FIELD_NAME" --arg o "$STATUS_OPTION_NAME" '
-            (.data.user.projectV2.fields.nodes[]? // empty | select(.name==$n) | .options[] | select(.name==$o) | .id),
-            (.data.organization.projectV2.fields.nodes[]? // empty | select(.name==$n) | .options[] | select(.name==$o) | .id)
-          ' | head -n1)
+            .data.user.projectV2.fields.nodes[] | select(.name==$n) | .options[] | select(.name==$o) | .id
+          ')
 
           [ -n "$project_id" ] && [ "$project_id" != "null" ] || { echo "Project not found"; exit 1; }
           [ -n "$status_field_id" ] && [ "$status_field_id" != "null" ] || { echo "Status field not found"; exit 1; }
