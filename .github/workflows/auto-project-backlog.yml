@@ -7,8 +7,8 @@ on:
 
 permissions:
   contents: read
-  issues: read
-  projects: write            # 必須
+  issues: write
+  repository-projects: write
 
 env:
   OWNER_LOGIN: "DELAxGithub" # プロジェクトの所有者(login)
