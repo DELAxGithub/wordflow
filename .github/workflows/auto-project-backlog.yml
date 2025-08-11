@@ -12,9 +12,9 @@ permissions:
 
 env:
   OWNER_LOGIN: "DELAxGithub" # プロジェクトの所有者(login)
-  PROJECT_NUMBER: "4"        # @DELAxGithub's dev board の番号
+  PROJECT_NUMBER: "5"        # Wordflow Development の番号
   STATUS_FIELD_NAME: "Status"
-  STATUS_OPTION_NAME: "Backlog"
+  STATUS_OPTION_NAME: "Todo"
 
 jobs:
   route:
