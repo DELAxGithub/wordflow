@@ -1,1 +1,7 @@
+# Build errors
 wordflowbiulderror/
+
+# Analysis and temporary files
+issues_analysis/backups/
+issues_analysis/temp/
+issues_analysis/*.log

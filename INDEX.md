@@ -562,6 +562,10 @@ struct NewView: View {
 - **UI**: 432-line view needs decomposition
 - **Testing**: No test coverage currently
 
+> 🔄 **Issues Status**: INDEX記載の技術的課題は一旦保留中
+> 実際の使用体験から生まれるフィードバックを優先してイシュー化します。
+> GitHub Issues & Projectsを使用した使用感ベースの改善ワークフローに移行しました。
+
 ### 📋 **Maintenance Tasks**
 - Regular dependency updates
 - SwiftData migration support
